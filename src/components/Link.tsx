@@ -1,0 +1,39 @@
+"use client";
+
+// This file exists solely to mark Next.js `Link` as a Client Component,
+// allowing it to be passed safely to MUI components (e.g. via `component={Link}`)
+
+import { Link as MuiLink, LinkProps as MuiLinkProps } from "@mui/material";
+import NextLink, { LinkProps } from "next/link";
+import { ComponentProps } from "react";
+
+export type { LinkProps };
+export default NextLink;
+
+type NextLinkComposedProps = ComponentProps<typeof NextLink>;
+
+type NextLinkProps = MuiLinkProps & {
+    href: NextLinkComposedProps["href"];
+};
+
+/**
+ * MUI-compatible link wrapper around Next.js `Link`.
+ *
+ * Use this component when a Material UI component expects a link-like
+ * component via `component={...}` while still preserving Next.js routing.
+ *
+ * @example
+ * <Link href="/dashboard" underline="hover" color="inherit">
+ *   Dashboard
+ * </Link>
+ */
+export function Link({ href, children, ...props }: Readonly<NextLinkProps>) {
+    // TODO: Fix unused
+    const { onClick, onMouseEnter, onTouchStart, ...rest } = props;
+
+    return (
+        <MuiLink {...rest} href={href} component={NextLink}>
+            {children}
+        </MuiLink>
+    );
+}

@@ -1,0 +1,169 @@
+"use client";
+
+import {
+    NotificationsNone as DefaultIcon,
+    CheckCircleOutlined as SuccessIcon,
+    ErrorOutlineOutlined as ErrorIcon,
+    WarningAmber as WarningIcon,
+    LightbulbOutlined as InfoIcon,
+    Close as CloseIcon,
+} from "@mui/icons-material";
+import { IconButton } from "@mui/material";
+import {
+    SnackbarProvider,
+    VariantType,
+    type OptionsObject,
+    enqueueSnackbar,
+    closeSnackbar,
+} from "notistack";
+import { createContext, useContext } from "react";
+
+import log from "@/utils/stdlog";
+import { LogFn } from "@/utils/stdlog/types";
+import { maxSnackbarCount } from "@/utils/stdvar";
+
+type SnackbarOptions = Pick<OptionsObject, "persist" | "onClose">;
+
+const SnackbarContext = createContext<{
+    showMessage: (message: string, options?: SnackbarOptions) => void;
+    showSuccess: (message: string, options?: SnackbarOptions) => void;
+    showError: (err: unknown, options?: SnackbarOptions) => void;
+    showWarning: (warn: unknown, options?: SnackbarOptions) => void;
+    showInfo: (message: string, options?: SnackbarOptions) => void;
+} | null>(null);
+
+/**
+ * Converts an unknown error value into a user-facing message.
+ */
+function errorToMessage(err: unknown): string {
+    if (err instanceof Error) {
+        return err.message || "Operation failed";
+    }
+
+    if (typeof err === "string") {
+        return err;
+    }
+
+    return "Operation failed";
+}
+
+/**
+ * Returns the snackbar hook state and actions.
+ */
+export function useSnackbar() {
+    const ctx = useContext(SnackbarContext);
+
+    if (!ctx) {
+        throw new Error("useSnackbar must be used within SnackbarProvider");
+    }
+
+    return ctx;
+}
+
+/**
+ * Renders the custom snackbar provider component.
+ */
+export default function CustomSnackbarProvider({
+    children,
+}: Readonly<{
+    children: React.ReactNode;
+}>) {
+    /**
+     * Handles show message behavior.
+     */
+    const _showMessage = (err: unknown, variant: VariantType, options?: SnackbarOptions) => {
+        const message = errorToMessage(err);
+
+        let logVariant: LogFn;
+
+        switch (variant) {
+            case "error":
+                logVariant = log.error;
+                break;
+
+            case "warning":
+                logVariant = log.warn;
+                break;
+
+            case "success":
+            case "info":
+            case "default":
+            default:
+                logVariant = log.info;
+        }
+
+        logVariant(message);
+
+        enqueueSnackbar(message, { variant, ...options });
+    };
+
+    /**
+     * Handles show message behavior.
+     */
+    const showMessage = (message: string, options?: SnackbarOptions) => {
+        _showMessage(message, "default", options);
+    };
+
+    /**
+     * Handles show success behavior.
+     */
+    const showSuccess = (message: string, options?: SnackbarOptions) => {
+        _showMessage(message, "success", options);
+    };
+
+    /**
+     * Handles show error behavior.
+     */
+    const showError = (err: unknown, options?: SnackbarOptions) => {
+        _showMessage(err, "error", options);
+    };
+
+    /**
+     * Handles show warning behavior.
+     */
+    const showWarning = (warn: unknown, options?: SnackbarOptions) => {
+        _showMessage(warn, "warning", options);
+    };
+
+    /**
+     * Handles show info behavior.
+     */
+    const showInfo = (message: string, options?: SnackbarOptions) => {
+        _showMessage(message, "info", options);
+    };
+
+    return (
+        <SnackbarContext.Provider
+            value={{
+                showMessage,
+                showSuccess,
+                showError,
+                showWarning,
+                showInfo,
+            }}
+        >
+            {children}
+
+            <SnackbarProvider
+                maxSnack={maxSnackbarCount}
+                iconVariant={{
+                    default: <DefaultIcon sx={{ mr: 1.5 }} />,
+                    success: <SuccessIcon sx={{ mr: 1.5 }} />,
+                    error: <ErrorIcon sx={{ mr: 1.5 }} />,
+                    warning: <WarningIcon sx={{ mr: 1.5 }} />,
+                    info: <InfoIcon sx={{ mr: 1.5 }} />,
+                }}
+                preventDuplicate
+                anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "right",
+                }}
+                action={(snackbarId) => (
+                    <IconButton onClick={() => closeSnackbar(snackbarId)}>
+                        <CloseIcon />
+                    </IconButton>
+                )}
+            />
+        </SnackbarContext.Provider>
+    );
+}
